@@ -10,14 +10,14 @@ function getPossibleTargets(row, col, isBlack, isKing) {
             // if (downLeft.children.length === 0) {
             //     result.push(downLeft);
             // }
-            result.push(`div.row${row + 1}.col${col - 1}`);
+            result.push({row: row + 1, col: col - 1});
         }
         if (col < 7) {
             // const downRight = document.querySelector(`.row${row + 1}.col${col + 1}`);
             // if (downRight.children.length === 0) {
             //     result.push(downLeft);
             // }
-            result.push(`.row${row + 1}.col${col + 1}`);
+            result.push({row: row + 1, col: col + 1});
         }
     }
     if (row >= 1 && (!isBlack || isKing)) {
@@ -26,14 +26,14 @@ function getPossibleTargets(row, col, isBlack, isKing) {
             // if (upLeft.children.length === 0) {
             //     result.push(downLeft);
             // }
-            result.push(`.row${row - 1}.col${col - 1}`);
+            result.push({row: row - 1, col: col - 1});
         }
         if (col < 7) {
             // const upRight = document.querySelector(`.row${row - 1}.col${col + 1}`);
             // if (upRight.children.length === 0) {
             //     result.push(downLeft);
             // }
-            result.push(`.row${row - 1}.col${col + 1}`);
+            result.push({row: row - 1, col: col + 1});
         }
     }
     return result;
@@ -77,19 +77,50 @@ for (let i = 0; i < 8; i++) {
                             prevSource.classList.remove('source-tile');
                         tile.classList.add('source-tile');
                         const piece = tile.firstElementChild;
+                        const isPieceBlack = piece.classList.contains('black-piece');
                         const targets = getPossibleTargets(i, j, 
-                            piece.classList.contains('black-piece'), piece.children.length > 0);
+                            isPieceBlack, piece.children.length > 0);
                         for (let target of targets) {
-                            const targetTile = document.querySelector(target);
+                            const targetTile = document.querySelector(`.row${target.row}.col${target.col}`);
                             if (targetTile.children.length === 0) {
                                 targetTile.classList.add('target-tile');
-
+                            } else {
+                                const isTargetPieceBlack = targetTile.firstElementChild.classList.contains('black-piece');
+                                if (isPieceBlack !== isTargetPieceBlack) {
+                                    const captureRow = target.row + (target.row - i);
+                                    const captureCol = target.col + (target.col - j);
+                                    if (captureRow >= 0 && captureRow < 8 && captureCol >= 0 && captureCol < 8) {
+                                        const captureTile = document.querySelector(`.row${captureRow}.col${captureCol}`);
+                                        if (captureTile.children.length == 0) {
+                                            captureTile.classList.add('target-tile');
+                                            targetTile.classList.add('captured');
+                                        }
+                                    }
+                                    
+                                }
                             }
                                 
                         }
                     }
                     
                     
+                } else {
+                    if (tile.classList.contains('target-tile')) {
+                        const sourceTile = document.querySelector('.source-tile');
+                        const piece = sourceTile.firstElementChild;
+                        sourceTile.removeChild(piece);
+                        tile.appendChild(piece);
+                        sourceTile.classList.remove('source-tile');
+                        const prevTargets = document.querySelectorAll('.target-tile');
+                        for (let target of prevTargets) {
+                            target.classList.remove('target-tile');
+                        }
+                        const captured = document.querySelector('.captured');
+                        if (captured) {
+                            captured.removeChild(captured.firstElementChild);
+                            captured.classList.remove('captured');
+                        }
+                    }
                 }
             });
         } else {
