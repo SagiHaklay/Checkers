@@ -6,6 +6,9 @@ img {
     width: 70%;
     height: 70%;
 }
+button {
+    margin: 5px;
+}
 #board {
     display: grid;
     width: 80vh;
@@ -50,14 +53,25 @@ img {
     justify-content: center;
     align-items: center;
     background: rgba(192, 192, 192, 0.5);
+    z-index: 2;
 }
 .modal-box {
     padding: 5px;
     z-index: 3;
     border: 1px solid black;
     background: white;
-    width: 50%;
-    height: 50%;
+    width: 300px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    align-content: space-around;
+}
+.button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 .none {
     display: none;

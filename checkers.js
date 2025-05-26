@@ -44,3 +44,24 @@ function initModal(modalId) {
         event.stopPropagation();
     });
 }
+function endGame(resultsMessage) {
+    const resultModalBox = document.querySelector('#resultModal .modal-box');
+    resultModalBox.innerHTML = resultsMessage;
+    openModal('resultModal');
+}
+let isBlackTurn = false;
+initModal('resignModal');
+initModal('drawModal');
+initModal('resultModal');
+document.getElementById('resignButton').addEventListener('click', () => openModal('resignModal'));
+document.getElementById('drawButton').addEventListener('click', () => openModal('drawModal'));
+document.getElementById('noResignButton').addEventListener('click', () => closeModal('resignModal'));
+document.getElementById('noDrawButton').addEventListener('click', () => closeModal('drawModal'));
+document.getElementById('yesResignButton').addEventListener('click', () => {
+    closeModal('resignModal');
+    endGame(isBlackTurn? 'White wins!' : 'Black wins!');
+});
+document.getElementById('yesDrawButton').addEventListener('click', () => {
+    closeModal('drawModal');
+    endGame('Draw!');
+});
