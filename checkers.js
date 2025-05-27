@@ -1,5 +1,8 @@
 const board = document.getElementById("board");
 let isBlackTurn = false;
+let isMultiCapture = false;
+let multiCapturePiece = null;
+let isGameOver = false;
 
 function isPieceBlack(piece) {
     return piece.classList.contains('black-piece');
@@ -18,34 +21,21 @@ function getPossibleTargets(row, col, piece) {
     const isKing = isPieceKing(piece);
     if (row < 7 && (isBlack || isKing)) {
         if (col >= 1) {
-            //console.log(`div.row${row + 1}.col${col - 1}`);
-            // const downLeft = document.querySelector(`.row${row + 1}.col${col - 1}`);
-            // if (downLeft.children.length === 0) {
-            //     result.push(downLeft);
-            // }
+            
             result.push({row: row + 1, col: col - 1});
         }
         if (col < 7) {
-            // const downRight = document.querySelector(`.row${row + 1}.col${col + 1}`);
-            // if (downRight.children.length === 0) {
-            //     result.push(downLeft);
-            // }
+            
             result.push({row: row + 1, col: col + 1});
         }
     }
     if (row >= 1 && (!isBlack || isKing)) {
         if (col >= 1) {
-            // const upLeft = document.querySelector(`.row${row - 1}.col${col - 1}`);
-            // if (upLeft.children.length === 0) {
-            //     result.push(downLeft);
-            // }
+            
             result.push({row: row - 1, col: col - 1});
         }
         if (col < 7) {
-            // const upRight = document.querySelector(`.row${row - 1}.col${col + 1}`);
-            // if (upRight.children.length === 0) {
-            //     result.push(downLeft);
-            // }
+            
             result.push({row: row - 1, col: col + 1});
         }
     }
@@ -66,7 +56,7 @@ for (let i = 0; i < 8; i++) {
         if (i % 2 !== j % 2) {
             // is black
             tile.classList.add('black-tile');
-            //tile.id = `tile${i}${j}`;
+            
             if (i < 3 || i > 4) {
                 const piece = document.createElement('div');
                 piece.classList.add('piece');
@@ -80,12 +70,16 @@ for (let i = 0; i < 8; i++) {
                 tile.appendChild(piece);
             }
             tile.addEventListener('click', () => {
+                if (isGameOver) return;
                 if (tile.children.length > 0) {
                     const piece = tile.firstElementChild;
                     if (isPieceBlack(piece) !== isBlackTurn) return;
+                    if (isMultiCapture && piece !== multiCapturePiece) return;
                     const prevTargets = document.querySelectorAll('.target-tile');
                     for (let target of prevTargets) {
                         target.classList.remove('target-tile');
+                        if (target.classList.contains('capture-tile'))
+                            target.classList.remove('capture-tile');
                     }
                     if (tile.classList.contains('source-tile')) {
                         tile.classList.remove('source-tile');
@@ -98,9 +92,12 @@ for (let i = 0; i < 8; i++) {
                         
                         
                         const legalTargets = getLegalTargetsWithCaptures(i, j, piece);
-                        for (let targetTile of legalTargets.legalTargetTiles) {
-                            targetTile.classList.add('target-tile');
+                        if (!isMultiCapture) {
+                            for (let targetTile of legalTargets.legalTargetTiles) {
+                                targetTile.classList.add('target-tile');
+                            }
                         }
+                        
                         for (let captureTile of legalTargets.captureTiles) {
                             captureTile.classList.add('target-tile');
                             captureTile.classList.add('capture-tile');
@@ -122,6 +119,8 @@ for (let i = 0; i < 8; i++) {
                             const captured = document.querySelector(`.row${capturedRow}.col${capturedCol}`);
                             captured.removeChild(captured.firstElementChild);
                             tile.appendChild(piece);
+                            isMultiCapture = canPieceCapture(i, j, piece);
+                            multiCapturePiece = piece;
                         } else {
                             if (!isCaptureAvailable()) {
                                 tile.appendChild(piece);
@@ -147,20 +146,23 @@ for (let i = 0; i < 8; i++) {
                             }
                         }
                         // end turn
-                        isBlackTurn = !isBlackTurn;
-                        const turnElement = document.getElementById('turnSpan');
-                        turnElement.innerHTML = isBlackTurn? 'Black' : 'White';
+                        if (!isMultiCapture) {
+                            isBlackTurn = !isBlackTurn;
+                            const turnElement = document.getElementById('turnSpan');
+                            turnElement.innerHTML = isBlackTurn? 'Black' : 'White';
 
-                        // check victory condition
-                        if (!legalMoveExists()) {
-                            const winner = isBlackTurn? 'White' : 'Black';
-                            let victoryMessage = winner + ' wins!';
-                            if (playerHasPieces()) {
-                                const loser = isBlackTurn? 'Black' : 'White';
-                                victoryMessage = loser + ' has no legal moves. ' + victoryMessage;
+                            // check victory condition
+                            if (!legalMoveExists()) {
+                                const winner = isBlackTurn? 'White' : 'Black';
+                                let victoryMessage = winner + ' wins!';
+                                if (playerHasPieces()) {
+                                    const loser = isBlackTurn? 'Black' : 'White';
+                                    victoryMessage = loser + ' has no legal moves. ' + victoryMessage;
+                                }
+                                endGame(victoryMessage);
                             }
-                            endGame(victoryMessage);
                         }
+                        
                     }
                 }
             });
@@ -211,11 +213,8 @@ function playerHasPieces() {
 }
 function legalMoveExists() {
     const playerPieces = document.querySelectorAll(isBlackTurn? '.black-piece' : '.white-piece');
-    //console.log(document.querySelector(`.row${1+1}.col${2-1}`).children);
     for (let playerPiece of playerPieces) {
-        //const playerTile = playerPiece.parentElement;
         const pos = getPosition(playerPiece.parentElement);
-        //console.log(playerPiece.parentElement);
         const legalTargets = getLegalTargetsWithCaptures(pos.row, pos.col, playerPiece);
         if (legalTargets.legalTargetTiles.length > 0 || legalTargets.captureTiles.length > 0) {
             return true;
@@ -251,8 +250,10 @@ function endGame(resultsMessage) {
 initModal('resignModal');
 initModal('drawModal');
 initModal('resultModal');
-document.getElementById('resignButton').addEventListener('click', () => openModal('resignModal'));
-document.getElementById('drawButton').addEventListener('click', () => openModal('drawModal'));
+const resignButton = document.getElementById('resignButton');
+resignButton.addEventListener('click', () => openModal('resignModal'));
+const drawButton = document.getElementById('drawButton');
+drawButton.addEventListener('click', () => openModal('drawModal'));
 document.getElementById('noResignButton').addEventListener('click', () => closeModal('resignModal'));
 document.getElementById('noDrawButton').addEventListener('click', () => closeModal('drawModal'));
 document.getElementById('yesResignButton').addEventListener('click', () => {
@@ -262,4 +263,9 @@ document.getElementById('yesResignButton').addEventListener('click', () => {
 document.getElementById('yesDrawButton').addEventListener('click', () => {
     closeModal('drawModal');
     endGame('Draw!');
+});
+document.getElementById('resultModal').addEventListener('click', () => {
+    resignButton.disabled = true;
+    drawButton.disabled = true;
+    isGameOver = true;
 });
