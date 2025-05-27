@@ -1,8 +1,21 @@
 const board = document.getElementById("board");
 let isBlackTurn = false;
 
-function getPossibleTargets(row, col, isBlack, isKing) {
+function isPieceBlack(piece) {
+    return piece.classList.contains('black-piece');
+}
+function isPieceKing(piece) {
+    return piece.children.length > 0;
+}
+function makeKing(piece) {
+    const crown = document.createElement('img');
+    crown.src = './crown.png';
+    piece.appendChild(crown);
+}
+function getPossibleTargets(row, col, piece) {
     let result = [];
+    const isBlack = isPieceBlack(piece);
+    const isKing = isPieceKing(piece);
     if (row < 7 && (isBlack || isKing)) {
         if (col >= 1) {
             //console.log(`div.row${row + 1}.col${col - 1}`);
@@ -63,7 +76,8 @@ for (let i = 0; i < 8; i++) {
             }
             tile.addEventListener('click', () => {
                 if (tile.children.length > 0) {
-                    
+                    const piece = tile.firstElementChild;
+                    if (isPieceBlack(piece) !== isBlackTurn) return;
                     const prevTargets = document.querySelectorAll('.target-tile');
                     for (let target of prevTargets) {
                         target.classList.remove('target-tile');
@@ -76,17 +90,16 @@ for (let i = 0; i < 8; i++) {
                         if (prevSource)
                             prevSource.classList.remove('source-tile');
                         tile.classList.add('source-tile');
-                        const piece = tile.firstElementChild;
-                        const isPieceBlack = piece.classList.contains('black-piece');
-                        const targets = getPossibleTargets(i, j, 
-                            isPieceBlack, piece.children.length > 0);
+                        
+                        //const isPieceBlack = piece.classList.contains('black-piece');
+                        const targets = getPossibleTargets(i, j, piece);
                         for (let target of targets) {
                             const targetTile = document.querySelector(`.row${target.row}.col${target.col}`);
                             if (targetTile.children.length === 0) {
                                 targetTile.classList.add('target-tile');
                             } else {
-                                const isTargetPieceBlack = targetTile.firstElementChild.classList.contains('black-piece');
-                                if (isPieceBlack !== isTargetPieceBlack) {
+                                //const isTargetPieceBlack = targetTile.firstElementChild.classList.contains('black-piece');
+                                if (isPieceBlack(piece) !== isPieceBlack(targetTile.firstElementChild)) {
                                     const captureRow = target.row + (target.row - i);
                                     const captureCol = target.col + (target.col - j);
                                     if (captureRow >= 0 && captureRow < 8 && captureCol >= 0 && captureCol < 8) {
@@ -120,6 +133,21 @@ for (let i = 0; i < 8; i++) {
                             captured.removeChild(captured.firstElementChild);
                             captured.classList.remove('captured');
                         }
+                        if (!isPieceKing(piece)) {
+                            if (isPieceBlack(piece)) {
+                                if (i === 7) {
+                                    makeKing(piece);
+                                }
+                            } else {
+                                if (i === 0) {
+                                    makeKing(piece);
+                                }
+                            }
+                        }
+                        // end turn
+                        isBlackTurn = !isBlackTurn;
+                        const turnElement = document.getElementById('turnSpan');
+                        turnElement.innerHTML = isBlackTurn? 'Black' : 'White';
                     }
                 }
             });
