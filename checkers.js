@@ -106,7 +106,8 @@ for (let i = 0; i < 8; i++) {
                                         const captureTile = document.querySelector(`.row${captureRow}.col${captureCol}`);
                                         if (captureTile.children.length == 0) {
                                             captureTile.classList.add('target-tile');
-                                            targetTile.classList.add('captured');
+                                            //targetTile.classList.add('captured');
+                                            captureTile.classList.add('capture-tile');
                                         }
                                     }
                                     
@@ -124,15 +125,26 @@ for (let i = 0; i < 8; i++) {
                         sourceTile.removeChild(piece);
                         tile.appendChild(piece);
                         sourceTile.classList.remove('source-tile');
+                        if (tile.classList.contains('capture-tile')) {
+                            const srcRow = sourceTile.classList[1].charAt(3);
+                            const srcCol = sourceTile.classList[2].charAt(3);
+                            const capturedRow = i - (i - srcRow)/2;
+                            const capturedCol = j - (j - srcCol)/2;
+                            const captured = document.querySelector(`.row${capturedRow}.col${capturedCol}`);
+                            captured.removeChild(captured.firstElementChild);
+                        }
                         const prevTargets = document.querySelectorAll('.target-tile');
                         for (let target of prevTargets) {
                             target.classList.remove('target-tile');
+                            if (target.classList.contains('capture-tile'))
+                                target.classList.remove('capture-tile');
                         }
-                        const captured = document.querySelector('.captured');
-                        if (captured) {
-                            captured.removeChild(captured.firstElementChild);
-                            captured.classList.remove('captured');
-                        }
+                        // const captured = document.querySelector('.captured');
+                        // if (captured) {
+                        //     captured.removeChild(captured.firstElementChild);
+                        //     captured.classList.remove('captured');
+                        // }
+                        
                         if (!isPieceKing(piece)) {
                             if (isPieceBlack(piece)) {
                                 if (i === 7) {
