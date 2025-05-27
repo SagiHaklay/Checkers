@@ -51,7 +51,12 @@ function getPossibleTargets(row, col, piece) {
     }
     return result;
 }
-
+function getPosition(tile) {
+    return {
+        row: parseInt(tile.classList[1].charAt(3)),
+        col: parseInt(tile.classList[2].charAt(3))
+    };
+}
 for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
         const tile = document.createElement("div");
@@ -126,10 +131,9 @@ for (let i = 0; i < 8; i++) {
                         tile.appendChild(piece);
                         sourceTile.classList.remove('source-tile');
                         if (tile.classList.contains('capture-tile')) {
-                            const srcRow = sourceTile.classList[1].charAt(3);
-                            const srcCol = sourceTile.classList[2].charAt(3);
-                            const capturedRow = i - (i - srcRow)/2;
-                            const capturedCol = j - (j - srcCol)/2;
+                            const srcPos = getPosition(sourceTile)
+                            const capturedRow = i - (i - srcPos.row)/2;
+                            const capturedCol = j - (j - srcPos.col)/2;
                             const captured = document.querySelector(`.row${capturedRow}.col${capturedCol}`);
                             captured.removeChild(captured.firstElementChild);
                         }
@@ -160,6 +164,17 @@ for (let i = 0; i < 8; i++) {
                         isBlackTurn = !isBlackTurn;
                         const turnElement = document.getElementById('turnSpan');
                         turnElement.innerHTML = isBlackTurn? 'Black' : 'White';
+
+                        // check victory condition
+                        if (!legalMoveExists()) {
+                            const winner = isBlackTurn? 'White' : 'Black';
+                            let victoryMessage = winner + ' wins!';
+                            if (playerHasPieces()) {
+                                const loser = isBlackTurn? 'Black' : 'White';
+                                victoryMessage = loser + ' has no legal moves. ' + victoryMessage;
+                            }
+                            endGame(victoryMessage);
+                        }
                     }
                 }
             });
@@ -169,6 +184,40 @@ for (let i = 0; i < 8; i++) {
         }
         board.appendChild(tile);
     }
+}
+function playerHasPieces() {
+    const playerPieces = document.querySelectorAll(isBlackTurn? '.black-piece' : '.white-piece');
+    return playerPieces.length > 0;
+}
+function legalMoveExists() {
+    const playerPieces = document.querySelectorAll(isBlackTurn? '.black-piece' : '.white-piece');
+    //console.log(document.querySelector(`.row${1+1}.col${2-1}`).children);
+    for (let playerPiece of playerPieces) {
+        //const playerTile = playerPiece.parentElement;
+        const pos = getPosition(playerPiece.parentElement);
+        //console.log(playerPiece.parentElement);
+        const possibleTargets = getPossibleTargets(pos.row, pos.col, playerPiece);
+        for (let target of possibleTargets) {
+            //console.log(target);
+            const targetTile = document.querySelector(`.row${target.row}.col${target.col}`);
+            if (targetTile.children.length === 0) {
+                return true;
+            } else {
+                if (isPieceBlack(playerPiece) !== isPieceBlack(targetTile.firstElementChild)) {
+                    const captureRow = target.row + (target.row - pos.row);
+                    const captureCol = target.col + (target.col - pos.col);
+                    if (captureRow >= 0 && captureRow < 8 && captureCol >= 0 && captureCol < 8) {
+                        const captureTile = document.querySelector(`.row${captureRow}.col${captureCol}`);
+                        if (captureTile.children.length === 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
 }
 function openModal(modalId) {
     let modal = document.getElementById(modalId);
