@@ -109,8 +109,9 @@ for (let i = 0; i < 8; i++) {
                     if (tile.classList.contains('target-tile')) {
                         const sourceTile = document.querySelector('.source-tile');
                         const piece = sourceTile.firstElementChild;
+                        const possibleCapture = findPossibleCapture();
                         sourceTile.removeChild(piece);
-                        //tile.appendChild(piece);
+                        tile.appendChild(piece);
                         sourceTile.classList.remove('source-tile');
                         if (tile.classList.contains('capture-tile')) {
                             const srcPos = getPosition(sourceTile)
@@ -118,13 +119,21 @@ for (let i = 0; i < 8; i++) {
                             const capturedCol = j - (j - srcPos.col)/2;
                             const captured = document.querySelector(`.row${capturedRow}.col${capturedCol}`);
                             captured.removeChild(captured.firstElementChild);
-                            tile.appendChild(piece);
+                            //tile.appendChild(piece);
                             isMultiCapture = canPieceCapture(i, j, piece);
                             multiCapturePiece = piece;
                         } else {
-                            if (!isCaptureAvailable()) {
-                                tile.appendChild(piece);
-                            } // otherwise piece burns
+                            // if (!isCaptureAvailable()) {
+                            //     tile.appendChild(piece);
+                            //     if (possibleCapture) {
+                            //         possibleCapture.removeChild(possibleCapture.firstElementChild);
+                            //     }
+                            // }
+                            if (possibleCapture) {
+                                const captureTile = possibleCapture.parentElement;
+                                captureTile.removeChild(possibleCapture);
+                            }
+                            
                         }
                         const prevTargets = document.querySelectorAll('.target-tile');
                         for (let target of prevTargets) {
@@ -206,6 +215,16 @@ function isCaptureAvailable() {
 function canPieceCapture(row, col, piece) {
     const legalTargets = getLegalTargetsWithCaptures(row, col, piece);
     return legalTargets.captureTiles.length > 0;
+}
+function findPossibleCapture() {
+    const playerPieces = document.querySelectorAll(isBlackTurn? '.black-piece' : '.white-piece');
+    for (let piece of playerPieces) {
+        const pos = getPosition(piece.parentElement);
+        if (canPieceCapture(pos.row, pos.col, piece)) {
+            return piece;
+        }
+    }
+    return null;
 }
 function playerHasPieces() {
     const playerPieces = document.querySelectorAll(isBlackTurn? '.black-piece' : '.white-piece');
