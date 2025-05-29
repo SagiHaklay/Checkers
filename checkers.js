@@ -14,11 +14,11 @@ function makeKing(piece) {
     crown.src = './crown.png';
     piece.appendChild(crown);
 }
-function getPossibleTargets(row, col, piece) {
+function getPossibleTargets(row, col, piece, allowBackwards=false) {
     let result = [];
     const isBlack = isPieceBlack(piece);
     const isKing = isPieceKing(piece);
-    if (row < 7 && (isBlack || isKing)) {
+    if (row < 7 && (isBlack || isKing || allowBackwards)) {
         if (col >= 1) {
             
             result.push({row: row + 1, col: col - 1});
@@ -28,7 +28,7 @@ function getPossibleTargets(row, col, piece) {
             result.push({row: row + 1, col: col + 1});
         }
     }
-    if (row >= 1 && (!isBlack || isKing)) {
+    if (row >= 1 && (!isBlack || isKing || allowBackwards)) {
         if (col >= 1) {
             
             result.push({row: row - 1, col: col - 1});
@@ -46,6 +46,16 @@ function getPosition(tile) {
         col: parseInt(tile.classList[2].charAt(3))
     };
 }
+function addPiece(tile, isBlack) {
+    const piece = document.createElement('div');
+    piece.classList.add('piece');
+    if (isBlack) {
+        piece.classList.add('black-piece');
+    } else {
+        piece.classList.add('white-piece');
+    }
+    tile.appendChild(piece);
+}
 function initBoard() {
     const board = document.getElementById("board");
     for (let row = 0; row < 8; row++) {
@@ -58,14 +68,7 @@ function initBoard() {
                 // is black
                 tile.classList.add('black-tile');
                 if (row < 3 || row > 4) {
-                    const piece = document.createElement('div');
-                    piece.classList.add('piece');
-                    if (row < 3) {
-                        piece.classList.add('black-piece');
-                    } else {
-                        piece.classList.add('white-piece');
-                    }
-                    tile.appendChild(piece);
+                    addPiece(tile, row < 3);
                 }
                 tile.addEventListener('click', () => {
                     if (isGameOver) return;
@@ -102,7 +105,7 @@ function selectPiece(tile, row, col) {
         if (prevSource)
             prevSource.classList.remove('source-tile');
         tile.classList.add('source-tile');              
-        const legalTargets = getLegalTargetsWithCaptures(row, col, piece);
+        const legalTargets = getLegalTargetsWithCaptures(row, col, piece, isMultiCapture);
         if (!isMultiCapture) {
             for (let targetTile of legalTargets.legalTargetTiles) {
                 targetTile.classList.add('target-tile');
@@ -140,11 +143,11 @@ function makeMove(targetTile, row, col) {
 }
 function capturePiece(sourceTile, targetRow, targetCol, capturingPiece) {
     const srcPos = getPosition(sourceTile)
-    const capturedRow = targetRow - (targetRow - srcPos.row)/2;
-    const capturedCol = targetCol - (targetCol - srcPos.col)/2;
+    const capturedRow = targetRow - (targetRow - srcPos.row > 0? 1 : -1);
+    const capturedCol = targetCol - (targetCol - srcPos.col > 0? 1 : -1);
     const captured = document.querySelector(`.row${capturedRow}.col${capturedCol}`);
     captured.removeChild(captured.firstElementChild);               
-    isMultiCapture = canPieceCapture(targetRow, targetCol, capturingPiece);
+    isMultiCapture = canPieceCapture(targetRow, targetCol, capturingPiece, true);
     multiCapturePiece = capturingPiece;
 }
 function checkForKing(piece, row) {
@@ -178,38 +181,88 @@ function endTurn() {
         }
     }
 }
-function getLegalTargetsWithCaptures(row, col, piece) {
+function getCaptureTargetTile(sourceRow, sourceCol, capturedPieceRow, capturedPieceCol) {
+    const captureTargetRow = capturedPieceRow + (capturedPieceRow - sourceRow > 0? 1 : -1);
+    const captureTargetCol = capturedPieceCol + (capturedPieceCol - sourceCol > 0? 1 : -1);
+    if (captureTargetRow >= 0 && captureTargetRow < 8 && captureTargetCol >= 0 && captureTargetCol < 8) {
+        const captureTargetTile = document.querySelector(`.row${captureTargetRow}.col${captureTargetCol}`);
+        if (captureTargetTile.children.length === 0) {
+            return captureTargetTile;
+        }
+    }
+    return null;
+}
+function findCaptureAcrossDiagonal(startRow, startCol, rowStep, colStep) {
+    let row = startRow;
+    let col = startCol;
+    while (row >= 0 && row < 8 && col >= 0 && col < 8) {
+        const tile = document.querySelector(`.row${row}.col${col}`);
+        if (tile.children.length !== 0) {
+            return tile;
+        }
+        row += rowStep;
+        col += colStep;
+    }
+    return null;
+}
+function getLegalTargetsWithCaptures(row, col, piece, allowBackwards=false) {
     let legalTargetTiles = [];
     let captureTiles = [];
-    const possibleTargets = getPossibleTargets(row, col, piece);
+    const possibleTargets = getPossibleTargets(row, col, piece, allowBackwards);
     for (let targetPos of possibleTargets) {
         const targetTile = document.querySelector(`.row${targetPos.row}.col${targetPos.col}`);
         if (targetTile.children.length === 0) {
             legalTargetTiles.push(targetTile);
-        } else {
-            if (isPieceBlack(piece) !== isPieceBlack(targetTile.firstElementChild)) {
-                const captureRow = targetPos.row + (targetPos.row - row);
-                const captureCol = targetPos.col + (targetPos.col - col);
-                if (captureRow >= 0 && captureRow < 8 && captureCol >= 0 && captureCol < 8) {
-                    const captureTile = document.querySelector(`.row${captureRow}.col${captureCol}`);
-                    if (captureTile.children.length === 0) {
+            if (isPieceKing(piece)) {
+                const rowStep = targetPos.row - row;
+                const colStep = targetPos.col - col;
+                const potentialCapture = findCaptureAcrossDiagonal(targetPos.row, targetPos.col, rowStep, colStep);
+                if (potentialCapture && isPieceBlack(piece) !== isPieceBlack(potentialCapture.firstElementChild)) {
+                    const capturePos = getPosition(potentialCapture);
+                    const captureTile = getCaptureTargetTile(row, col, capturePos.row, capturePos.col);
+                    if (captureTile) 
                         captureTiles.push(captureTile);
-                    }
                 }
             }
+        } else {
+            if (isPieceBlack(piece) !== isPieceBlack(targetTile.firstElementChild)) {
+                // const captureRow = targetPos.row + (targetPos.row - row);
+                // const captureCol = targetPos.col + (targetPos.col - col);
+                // if (captureRow >= 0 && captureRow < 8 && captureCol >= 0 && captureCol < 8) {
+                //     const captureTile = document.querySelector(`.row${captureRow}.col${captureCol}`);
+                //     if (captureTile.children.length === 0) {
+                //         captureTiles.push(captureTile);
+                //     }
+                // }
+                const captureTile = getCaptureTargetTile(row, col, targetPos.row, targetPos.col);
+                if (captureTile)
+                    captureTiles.push(captureTile);
+            }
         }
+        // let potentialCapture = targetTile;
+        // if (isPieceKing(piece)) {
+        //     const rowStep = targetPos.row - row;
+        //     const colStep = targetPos.col - col;
+        //     potentialCapture = findCaptureAcrossDiagonal(targetPos.row, targetPos.col, rowStep, colStep);
+        // }
+        // if (isPieceBlack(piece) !== isPieceBlack(potentialCapture.firstElementChild)) {
+        //     const capturePos = getPosition(potentialCapture);
+        //     const captureTargetTile = getCaptureTargetTile(row, col, capturePos.row, capturePos.col);
+        //     if (captureTargetTile)
+        //         captureTiles.push(captureTargetTile);
+        // }
     }
     return {
         legalTargetTiles: legalTargetTiles,
         captureTiles: captureTiles
     };
 }
-function isCaptureAvailable() {
-    const captureTile = document.querySelector('.capture-tile');
-    return captureTile != null;
-}
-function canPieceCapture(row, col, piece) {
-    const legalTargets = getLegalTargetsWithCaptures(row, col, piece);
+// function isCaptureAvailable() {
+//     const captureTile = document.querySelector('.capture-tile');
+//     return captureTile != null;
+// }
+function canPieceCapture(row, col, piece, allowBackwards=false) {
+    const legalTargets = getLegalTargetsWithCaptures(row, col, piece, allowBackwards);
     return legalTargets.captureTiles.length > 0;
 }
 function findPossibleCapture() {
@@ -237,6 +290,21 @@ function legalMoveExists() {
     }
 
     return false;
+}
+function resetBoard() {
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            if (row % 2 !== col % 2) {
+                const tile = document.querySelector(`.row${row}.col${col}`);
+                if (tile.children.length > 0) {
+                    tile.removeChild(tile.firstElementChild);
+                }
+                if (row < 3 || row > 4) {
+                    addPiece(tile, row < 3);
+                }
+            }
+        }
+    }
 }
 function openModal(modalId) {
     let modal = document.getElementById(modalId);
@@ -281,6 +349,16 @@ function initButtons() {
         resignButton.disabled = true;
         drawButton.disabled = true;
         isGameOver = true;
+    });
+    document.getElementById('restartButton').addEventListener('click', () => {
+        resignButton.disabled = false;
+        drawButton.disabled = false;
+        isGameOver = false;
+        isBlackTurn = false;
+        isMultiCapture = false;
+        multiCapturePiece = null;
+        resetBoard();
+        document.getElementById('turnSpan').innerHTML = 'White';
     });
 }
 initBoard();
