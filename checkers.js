@@ -1,4 +1,3 @@
-const board = document.getElementById("board");
 let isBlackTurn = false;
 let isMultiCapture = false;
 let multiCapturePiece = null;
@@ -47,139 +46,136 @@ function getPosition(tile) {
         col: parseInt(tile.classList[2].charAt(3))
     };
 }
-for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-        const tile = document.createElement("div");
-        tile.classList.add('tile');
-        tile.classList.add('row' + i);
-        tile.classList.add('col' + j);
-        if (i % 2 !== j % 2) {
-            // is black
-            tile.classList.add('black-tile');
-            
-            if (i < 3 || i > 4) {
-                const piece = document.createElement('div');
-                piece.classList.add('piece');
-                if (i < 3) {
-                    piece.classList.add('black-piece');
-                } else {
-                    piece.classList.add('white-piece');
-
-                }
-                
-                tile.appendChild(piece);
-            }
-            tile.addEventListener('click', () => {
-                if (isGameOver) return;
-                if (tile.children.length > 0) {
-                    const piece = tile.firstElementChild;
-                    if (isPieceBlack(piece) !== isBlackTurn) return;
-                    if (isMultiCapture && piece !== multiCapturePiece) return;
-                    const prevTargets = document.querySelectorAll('.target-tile');
-                    for (let target of prevTargets) {
-                        target.classList.remove('target-tile');
-                        if (target.classList.contains('capture-tile'))
-                            target.classList.remove('capture-tile');
+function initBoard() {
+    const board = document.getElementById("board");
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const tile = document.createElement("div");
+            tile.classList.add('tile');
+            tile.classList.add('row' + row);
+            tile.classList.add('col' + col);
+            if (row % 2 !== col % 2) {
+                // is black
+                tile.classList.add('black-tile');
+                if (row < 3 || row > 4) {
+                    const piece = document.createElement('div');
+                    piece.classList.add('piece');
+                    if (row < 3) {
+                        piece.classList.add('black-piece');
+                    } else {
+                        piece.classList.add('white-piece');
                     }
-                    if (tile.classList.contains('source-tile')) {
-                        tile.classList.remove('source-tile');
+                    tile.appendChild(piece);
+                }
+                tile.addEventListener('click', () => {
+                    if (isGameOver) return;
+                    if (tile.children.length > 0) {
+                        selectPiece(tile, row, col);
                         
                     } else {
-                        const prevSource = document.querySelector('.source-tile');
-                        if (prevSource)
-                            prevSource.classList.remove('source-tile');
-                        tile.classList.add('source-tile');
-                        
-                        
-                        const legalTargets = getLegalTargetsWithCaptures(i, j, piece);
-                        if (!isMultiCapture) {
-                            for (let targetTile of legalTargets.legalTargetTiles) {
-                                targetTile.classList.add('target-tile');
-                            }
-                        }
-                        
-                        for (let captureTile of legalTargets.captureTiles) {
-                            captureTile.classList.add('target-tile');
-                            captureTile.classList.add('capture-tile');
-                        }
+                        if (tile.classList.contains('target-tile'))
+                            makeMove(tile, row, col);
                     }
-                    
-                    
-                } else {
-                    if (tile.classList.contains('target-tile')) {
-                        const sourceTile = document.querySelector('.source-tile');
-                        const piece = sourceTile.firstElementChild;
-                        const possibleCapture = findPossibleCapture();
-                        sourceTile.removeChild(piece);
-                        tile.appendChild(piece);
-                        sourceTile.classList.remove('source-tile');
-                        if (tile.classList.contains('capture-tile')) {
-                            const srcPos = getPosition(sourceTile)
-                            const capturedRow = i - (i - srcPos.row)/2;
-                            const capturedCol = j - (j - srcPos.col)/2;
-                            const captured = document.querySelector(`.row${capturedRow}.col${capturedCol}`);
-                            captured.removeChild(captured.firstElementChild);
-                            //tile.appendChild(piece);
-                            isMultiCapture = canPieceCapture(i, j, piece);
-                            multiCapturePiece = piece;
-                        } else {
-                            // if (!isCaptureAvailable()) {
-                            //     tile.appendChild(piece);
-                            //     if (possibleCapture) {
-                            //         possibleCapture.removeChild(possibleCapture.firstElementChild);
-                            //     }
-                            // }
-                            if (possibleCapture) {
-                                const captureTile = possibleCapture.parentElement;
-                                captureTile.removeChild(possibleCapture);
-                            }
-                            
-                        }
-                        const prevTargets = document.querySelectorAll('.target-tile');
-                        for (let target of prevTargets) {
-                            target.classList.remove('target-tile');
-                            if (target.classList.contains('capture-tile'))
-                                target.classList.remove('capture-tile');
-                        }
-                        
-                        
-                        if (!isPieceKing(piece)) {
-                            if (isPieceBlack(piece)) {
-                                if (i === 7) {
-                                    makeKing(piece);
-                                }
-                            } else {
-                                if (i === 0) {
-                                    makeKing(piece);
-                                }
-                            }
-                        }
-                        // end turn
-                        if (!isMultiCapture) {
-                            isBlackTurn = !isBlackTurn;
-                            const turnElement = document.getElementById('turnSpan');
-                            turnElement.innerHTML = isBlackTurn? 'Black' : 'White';
-
-                            // check victory condition
-                            if (!legalMoveExists()) {
-                                const winner = isBlackTurn? 'White' : 'Black';
-                                let victoryMessage = winner + ' wins!';
-                                if (playerHasPieces()) {
-                                    const loser = isBlackTurn? 'Black' : 'White';
-                                    victoryMessage = loser + ' has no legal moves. ' + victoryMessage;
-                                }
-                                endGame(victoryMessage);
-                            }
-                        }
-                        
-                    }
-                }
-            });
-        } else {
-            // is white
-            tile.classList.add('white-tile');
+                });
+            } else {
+                // is white
+                tile.classList.add('white-tile');
+            }
+            board.appendChild(tile);
         }
-        board.appendChild(tile);
+    }
+}
+function selectPiece(tile, row, col) {
+    const piece = tile.firstElementChild;
+    if (isPieceBlack(piece) !== isBlackTurn) return;
+    if (isMultiCapture && piece !== multiCapturePiece) return;
+    const prevTargets = document.querySelectorAll('.target-tile');
+    for (let target of prevTargets) {
+        target.classList.remove('target-tile');
+        if (target.classList.contains('capture-tile'))
+            target.classList.remove('capture-tile');
+    }
+    if (tile.classList.contains('source-tile')) {
+        tile.classList.remove('source-tile');               
+    } else {
+        const prevSource = document.querySelector('.source-tile');
+        if (prevSource)
+            prevSource.classList.remove('source-tile');
+        tile.classList.add('source-tile');              
+        const legalTargets = getLegalTargetsWithCaptures(row, col, piece);
+        if (!isMultiCapture) {
+            for (let targetTile of legalTargets.legalTargetTiles) {
+                targetTile.classList.add('target-tile');
+            }
+        }             
+        for (let captureTile of legalTargets.captureTiles) {
+            captureTile.classList.add('target-tile');
+            captureTile.classList.add('capture-tile');
+        }
+    }
+}
+function makeMove(targetTile, row, col) {
+    const sourceTile = document.querySelector('.source-tile');
+    const piece = sourceTile.firstElementChild;
+    const possibleCapture = findPossibleCapture();
+    sourceTile.removeChild(piece);
+    targetTile.appendChild(piece);
+    sourceTile.classList.remove('source-tile');
+    if (targetTile.classList.contains('capture-tile')) {
+        capturePiece(sourceTile, row, col, piece);
+    } else {            
+        if (possibleCapture) {
+            const captureTile = possibleCapture.parentElement;
+            captureTile.removeChild(possibleCapture);
+        }              
+    }
+    const prevTargets = document.querySelectorAll('.target-tile');
+    for (let target of prevTargets) {
+        target.classList.remove('target-tile');
+        if (target.classList.contains('capture-tile'))
+            target.classList.remove('capture-tile');
+    }
+    checkForKing(piece, row);           
+    endTurn();              
+}
+function capturePiece(sourceTile, targetRow, targetCol, capturingPiece) {
+    const srcPos = getPosition(sourceTile)
+    const capturedRow = targetRow - (targetRow - srcPos.row)/2;
+    const capturedCol = targetCol - (targetCol - srcPos.col)/2;
+    const captured = document.querySelector(`.row${capturedRow}.col${capturedCol}`);
+    captured.removeChild(captured.firstElementChild);               
+    isMultiCapture = canPieceCapture(targetRow, targetCol, capturingPiece);
+    multiCapturePiece = capturingPiece;
+}
+function checkForKing(piece, row) {
+    if (!isPieceKing(piece)) {
+        if (isPieceBlack(piece)) {
+            if (row === 7) {
+                makeKing(piece);
+            }
+        } else {
+            if (row === 0) {
+                makeKing(piece);
+            }
+        }
+    }
+}
+function endTurn() {
+    if (!isMultiCapture) {
+        isBlackTurn = !isBlackTurn;
+        const turnElement = document.getElementById('turnSpan');
+        turnElement.innerHTML = isBlackTurn? 'Black' : 'White';
+
+        // check victory condition
+        if (!legalMoveExists()) {
+            const winner = isBlackTurn? 'White' : 'Black';
+            let victoryMessage = winner + ' wins!';
+            if (playerHasPieces()) {
+                const loser = isBlackTurn? 'Black' : 'White';
+                victoryMessage = loser + ' has no legal moves. ' + victoryMessage;
+            }
+            endGame(victoryMessage);
+        }
     }
 }
 function getLegalTargetsWithCaptures(row, col, piece) {
@@ -266,25 +262,29 @@ function endGame(resultsMessage) {
     openModal('resultModal');
 }
 
+function initButtons() {
+    const resignButton = document.getElementById('resignButton');
+    resignButton.addEventListener('click', () => openModal('resignModal'));
+    const drawButton = document.getElementById('drawButton');
+    drawButton.addEventListener('click', () => openModal('drawModal'));
+    document.getElementById('noResignButton').addEventListener('click', () => closeModal('resignModal'));
+    document.getElementById('noDrawButton').addEventListener('click', () => closeModal('drawModal'));
+    document.getElementById('yesResignButton').addEventListener('click', () => {
+        closeModal('resignModal');
+        endGame(isBlackTurn? 'White wins!' : 'Black wins!');
+    });
+    document.getElementById('yesDrawButton').addEventListener('click', () => {
+        closeModal('drawModal');
+        endGame('Draw!');
+    });
+    document.getElementById('resultModal').addEventListener('click', () => {
+        resignButton.disabled = true;
+        drawButton.disabled = true;
+        isGameOver = true;
+    });
+}
+initBoard();
 initModal('resignModal');
 initModal('drawModal');
 initModal('resultModal');
-const resignButton = document.getElementById('resignButton');
-resignButton.addEventListener('click', () => openModal('resignModal'));
-const drawButton = document.getElementById('drawButton');
-drawButton.addEventListener('click', () => openModal('drawModal'));
-document.getElementById('noResignButton').addEventListener('click', () => closeModal('resignModal'));
-document.getElementById('noDrawButton').addEventListener('click', () => closeModal('drawModal'));
-document.getElementById('yesResignButton').addEventListener('click', () => {
-    closeModal('resignModal');
-    endGame(isBlackTurn? 'White wins!' : 'Black wins!');
-});
-document.getElementById('yesDrawButton').addEventListener('click', () => {
-    closeModal('drawModal');
-    endGame('Draw!');
-});
-document.getElementById('resultModal').addEventListener('click', () => {
-    resignButton.disabled = true;
-    drawButton.disabled = true;
-    isGameOver = true;
-});
+initButtons();
